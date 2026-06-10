@@ -1,16 +1,15 @@
 ﻿import { useRef, useState } from "react";
-import { Upload, Download, FileSpreadsheet, Trash2 } from "lucide-react";
-import { useDatasetStore } from "../../stores/datasetStore";
-import { exportToExcel } from "../../services/excel/parser";
+import { Upload, FileSpreadsheet, Loader2 } from "lucide-react";
+import { useAppStore } from "../../stores/datasetStore";
 
 export default function FileUploader() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const { datasets, uploadFile, preview, loading, error, clearError } = useDatasetStore();
+  const { uploadFile, loading, error, clearError, fileName, allProducts } = useAppStore();
 
   const handleFile = async (file: File) => {
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      useDatasetStore.setState({ error: "仅支持 .xlsx 和 .xls 格式的文件" });
+      useAppStore.setState({ error: "仅支持 .xlsx 和 .xls 格式" });
       return;
     }
     clearError();
@@ -24,41 +23,51 @@ export default function FileUploader() {
     if (file) handleFile(file);
   };
 
+  const hasData = allProducts.length > 0;
+
   return (
     <section className="upload-section">
-      <div className="section-head">
-        <FileSpreadsheet size={17} strokeWidth={1.5} />
-        <span>数据</span>
-        <div className="section-actions">
-          {preview && (
-            <button className="btn-ghost" onClick={() => exportToExcel(preview.rows, "导出数据")}>
-              <Download size={14} /> 导出
-            </button>
-          )}
-        </div>
-      </div>
-
       <div
         className={`drop-zone ${dragging ? "drop-zone-active" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
+        onClick={() => !hasData && fileRef.current?.click()}
       >
-        <div className="drop-icon-wrap">
-          <Upload size={22} strokeWidth={1.5} />
-        </div>
-        <p>拖拽文件到此处，或点击上传</p>
-        <span className="drop-hint">支持 .xlsx / .xls</span>
+        {loading ? (
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 size={28} className="animate-spin text-ink-secondary" />
+            <p className="text-ink-secondary">正在解析文件...</p>
+          </div>
+        ) : hasData ? (
+          <div className="flex items-center gap-3">
+            <FileSpreadsheet size={22} className="text-ink-secondary" />
+            <div className="text-left">
+              <p className="text-sm text-ink font-medium">{fileName}</p>
+              <p className="text-xs text-ink-secondary">{allProducts.length} 条记录</p>
+            </div>
+            <button
+              className="btn-ghost ml-4"
+              onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+            >
+              更换文件
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="drop-icon-wrap">
+              <Upload size={24} strokeWidth={1.5} />
+            </div>
+            <p>拖拽 Excel 文件到此处，或点击上传</p>
+            <span className="drop-hint">支持 .xlsx / .xls</span>
+          </>
+        )}
         <input
           ref={fileRef}
           type="file"
           accept=".xlsx,.xls"
           className="file-input-hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFile(file);
-          }}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
         />
       </div>
 
@@ -72,39 +81,6 @@ export default function FileUploader() {
           <button onClick={clearError}>关闭</button>
         </div>
       )}
-
-      {datasets.length > 0 && (
-        <div className="dataset-list">
-          {datasets.map((ds) => (
-            <DatasetItem key={ds.id} dataset={ds} />
-          ))}
-        </div>
-      )}
     </section>
-  );
-}
-
-function DatasetItem({ dataset }: { dataset: import("../../types").Dataset }) {
-  const { selectDataset, currentDataset, removeDataset } = useDatasetStore();
-  const isActive = currentDataset?.id === dataset.id;
-
-  return (
-    <div
-      className={`dataset-item ${isActive ? "dataset-item-active" : ""}`}
-      onClick={() => selectDataset(dataset)}
-    >
-      <FileSpreadsheet size={16} strokeWidth={1.5} />
-      <span className="dataset-name">{dataset.name}</span>
-      <span className="dataset-meta">
-        {dataset.data.length} 行 &middot; {new Date(dataset.created_at).toLocaleDateString("zh-CN")}
-      </span>
-      <button
-        className="dataset-delete"
-        onClick={(e) => { e.stopPropagation(); removeDataset(dataset.id); }}
-        title="删除"
-      >
-        <Trash2 size={14} />
-      </button>
-    </div>
   );
 }

@@ -1,70 +1,93 @@
 ﻿import { create } from "zustand";
-import type { ChartConfig, ColumnInfo } from "../types";
-import { parseExcelFile, exportToExcel } from "../services/excel/parser";
-import { recommendChart } from "../services/chart/config";
+import { parseExcelFile, exportToExcel, type Product } from "../services/excel/parser";
 
 export { exportToExcel };
+export type { Product };
 
-function uid(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
+type SortOrder = "asc" | "desc" | "none";
 
-function loadSets(): import("../types").Dataset[] {
-  try { return JSON.parse(localStorage.getItem("pd_datasets") || "[]"); }
-  catch { return []; }
-}
-
-function saveSets(datasets: import("../types").Dataset[]) {
-  localStorage.setItem("pd_datasets", JSON.stringify(datasets));
-}
-
-interface DatasetState {
-  datasets: import("../types").Dataset[];
-  currentDataset: import("../types").Dataset | null;
-  preview: { rows: Record<string, unknown>[]; columns: ColumnInfo[] } | null;
-  chartConfig: ChartConfig | null;
+interface AppState {
+  // Upload state
+  fileName: string;
+  columns: string[];
+  totalRows: number;
+  allProducts: Product[];
   loading: boolean;
   error: string | null;
-  loadDatasets: () => void;
+
+  // Filter state
+  search: string;
+  category: string;
+  sortOrder: SortOrder;
+
+  // Computed
+  categories: string[];
+  filteredProducts: Product[];
+
+  // Actions
   uploadFile: (file: File) => Promise<void>;
-  removeDataset: (id: string) => void;
-  selectDataset: (dataset: import("../types").Dataset) => void;
-  updateChartConfig: (config: Partial<ChartConfig>) => void;
+  setSearch: (s: string) => void;
+  setCategory: (c: string) => void;
+  setSortOrder: (o: SortOrder) => void;
+  clearFilters: () => void;
   clearError: () => void;
 }
 
-export const useDatasetStore = create<DatasetState>((set) => ({
-  datasets: loadSets(),
-  currentDataset: null,
-  preview: null,
-  chartConfig: null,
+function computeFiltered(
+  all: Product[],
+  search: string,
+  category: string,
+  sortOrder: SortOrder
+): Product[] {
+  let result = [...all];
+
+  if (category) {
+    result = result.filter((p) => p.category === category);
+  }
+
+  if (search.trim()) {
+    const term = search.trim();
+    result = result.filter((p) => p.name.includes(term));
+  }
+
+  if (sortOrder === "asc") {
+    result.sort((a, b) => a.price - b.price);
+  } else if (sortOrder === "desc") {
+    result.sort((a, b) => b.price - a.price);
+  }
+
+  return result;
+}
+
+export const useAppStore = create<AppState>((set, get) => ({
+  fileName: "",
+  columns: [],
+  totalRows: 0,
+  allProducts: [],
   loading: false,
   error: null,
-
-  loadDatasets: () => {
-    set({ datasets: loadSets() });
-  },
+  search: "",
+  category: "",
+  sortOrder: "none",
+  categories: [],
+  filteredProducts: [],
 
   uploadFile: async (file: File) => {
     set({ loading: true, error: null });
     try {
-      const result = await parseExcelFile(file);
-      const name = file.name.replace(/\.(xlsx|xls)$/i, "");
-      const config = recommendChart(result.columns);
-      const dataset: import("../types").Dataset = {
-        id: uid(),
-        user_id: "local",
-        name,
-        data: result.rows,
-        columns: result.columns,
-        created_at: new Date().toISOString(),
-      };
-      const updated = [dataset, ...loadSets()];
-      saveSets(updated);
+      const data = await parseExcelFile(file);
+      const categories = [...new Set(data.products.map((p) => p.category))].sort();
+      const filtered = computeFiltered(data.products, "", "", "none");
       set({
-        datasets: updated,
-        preview: { rows: result.rows, columns: result.columns },
-        chartConfig: config,
+        fileName: file.name,
+        columns: data.columns,
+        totalRows: data.totalRows,
+        allProducts: data.products,
+        categories,
+        filteredProducts: filtered,
+        search: "",
+        category: "",
+        sortOrder: "none",
         loading: false,
       });
     } catch (err) {
@@ -72,27 +95,32 @@ export const useDatasetStore = create<DatasetState>((set) => ({
     }
   },
 
-  removeDataset: (id) => {
-    const updated = loadSets().filter((d) => d.id !== id);
-    saveSets(updated);
-    set((s) => ({
-      datasets: updated,
-      currentDataset: s.currentDataset?.id === id ? null : s.currentDataset,
-    }));
+  setSearch: (s) => {
+    const { allProducts, category, sortOrder } = get();
+    const filtered = computeFiltered(allProducts, s, category, sortOrder);
+    set({ search: s, filteredProducts: filtered });
   },
 
-  selectDataset: (dataset) => {
+  setCategory: (c) => {
+    const { allProducts, search, sortOrder } = get();
+    const filtered = computeFiltered(allProducts, search, c, sortOrder);
+    set({ category: c, filteredProducts: filtered });
+  },
+
+  setSortOrder: (o) => {
+    const { allProducts, search, category } = get();
+    const filtered = computeFiltered(allProducts, search, category, o);
+    set({ sortOrder: o, filteredProducts: filtered });
+  },
+
+  clearFilters: () => {
+    const { allProducts } = get();
     set({
-      currentDataset: dataset,
-      chartConfig: recommendChart(dataset.columns),
-      preview: { rows: dataset.data, columns: dataset.columns },
+      search: "",
+      category: "",
+      sortOrder: "none",
+      filteredProducts: allProducts,
     });
-  },
-
-  updateChartConfig: (config) => {
-    set((s) => ({
-      chartConfig: s.chartConfig ? { ...s.chartConfig, ...config } : null,
-    }));
   },
 
   clearError: () => set({ error: null }),

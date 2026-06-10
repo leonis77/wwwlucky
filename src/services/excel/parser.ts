@@ -1,12 +1,19 @@
 ﻿import * as XLSX from "xlsx";
-import type { ColumnInfo } from "../../types";
 
-export interface ParseResult {
-  rows: Record<string, unknown>[];
-  columns: ColumnInfo[];
+export interface Product {
+  name: string;
+  price: number;
+  category: string;
+  raw: Record<string, unknown>;
 }
 
-export function parseExcelFile(file: File): Promise<ParseResult> {
+export interface NormalizedData {
+  products: Product[];
+  columns: string[];
+  totalRows: number;
+}
+
+export function parseExcelFile(file: File): Promise<NormalizedData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -15,51 +22,44 @@ export function parseExcelFile(file: File): Promise<ParseResult> {
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 
-        if (jsonData.length === 0) {
+        if (rows.length === 0) {
           reject(new Error("工作表为空"));
           return;
         }
 
-        // Clean up column names
-        const rawKeys = Object.keys(jsonData[0]);
-        const columns: ColumnInfo[] = [];
-        const keyMap: Record<string, string> = {};
+        const rawKeys = Object.keys(rows[0]);
+        const columns = rawKeys.filter((k) =>
+          rows.some((r) => String(r[k] ?? "").trim() !== "")
+        );
 
-        for (let i = 0; i < rawKeys.length; i++) {
-          const key = rawKeys[i];
-          // Replace __EMPTY / __EMPTY_N with "列 N"
-          let label = key;
-          if (key.startsWith("__EMPTY")) {
-            label = "列 " + (i + 1);
-          }
-          keyMap[key] = label;
-          columns.push({
-            key,
-            label,
-            type: inferColumnType(jsonData, key),
-          });
+        // Identify columns by type
+        const colTypes = rawKeys.map((key) => ({
+          key,
+          type: inferType(rows, key),
+        }));
+
+        const nameCol = colTypes.find((c) => c.type === "string")?.key ?? rawKeys[0];
+        const priceCol = colTypes.find((c) => c.type === "number")?.key ?? rawKeys[1];
+        const categoryCol = colTypes.find(
+          (c) => c.type === "string" && c.key !== nameCol
+        )?.key ?? rawKeys[rawKeys.length > 2 ? 2 : 0];
+
+        const products: Product[] = [];
+        for (const row of rows) {
+          const name = String(row[nameCol] ?? "").trim();
+          if (!name) continue;
+
+          const price = parseFloat(String(row[priceCol] ?? "0")) || 0;
+          const category = String(row[categoryCol] ?? "").trim() || "未分类";
+
+          products.push({ name, price, category, raw: row });
         }
 
-        // Filter out completely empty columns
-        const nonEmptyCols = columns.filter((col) => {
-          return jsonData.some((row) => String(row[col.key] ?? "").trim() !== "");
-        });
-
-        const finalRows = nonEmptyCols.length < columns.length
-          ? jsonData.map((row) => {
-              const newRow: Record<string, unknown> = {};
-              for (const col of nonEmptyCols) {
-                newRow[col.key] = row[col.key];
-              }
-              return newRow;
-            })
-          : jsonData;
-
-        resolve({ rows: finalRows, columns: nonEmptyCols });
+        resolve({ products, columns, totalRows: rows.length });
       } catch {
-        reject(new Error("文件解析失败"));
+        reject(new Error("文件解析失败，请检查格式"));
       }
     };
     reader.onerror = () => reject(new Error("文件读取失败"));
@@ -67,27 +67,27 @@ export function parseExcelFile(file: File): Promise<ParseResult> {
   });
 }
 
-function inferColumnType(rows: Record<string, unknown>[], key: string): ColumnInfo["type"] {
-  const sample = rows.slice(0, 20);
+function inferType(rows: Record<string, unknown>[], key: string): "string" | "number" {
+  const sample = rows.slice(0, 30);
   let numberCount = 0;
   let totalCount = 0;
-
   for (const row of sample) {
     const val = row[key];
     if (val === null || val === undefined || val === "") continue;
     totalCount++;
-    const str = String(val).trim();
-    if (!isNaN(Number(str)) && str !== "") numberCount++;
+    if (!isNaN(Number(val)) && String(val).trim() !== "") numberCount++;
   }
-
-  if (totalCount === 0) return "string";
-  if (numberCount / totalCount >= 0.7) return "number";
-  return "string";
+  return totalCount > 0 && numberCount / totalCount >= 0.5 ? "number" : "string";
 }
 
-export function exportToExcel(rows: Record<string, unknown>[], fileName: string): void {
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-  XLSX.writeFile(workbook, `${fileName}.xlsx`);
+export function exportToExcel(products: Product[], fileName: string): void {
+  const rows = products.map((p) => ({
+    产品名称: p.name,
+    价格: p.price,
+    分类: p.category,
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
 }

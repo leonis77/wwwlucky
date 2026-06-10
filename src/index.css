@@ -223,6 +223,133 @@ body {
 
 /* ── Main ── */
 
+/* ── Filter Panel ── */
+
+.filter-panel {
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.filter-search-wrap {
+  position: relative;
+}
+
+.filter-search-icon {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%); color: var(--text-muted); pointer-events: none;
+}
+
+.filter-search-input {
+  width: 220px;
+  padding: 7px 32px 7px 32px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text); font-size: 0.82rem; font-family: var(--font);
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.filter-search-input:focus {
+  border-color: rgba(0,0,0,0.2);
+}
+
+.filter-search-input::placeholder { color: var(--text-muted); }
+
+.filter-clear-btn {
+  position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; padding: 2px;
+}
+.filter-clear-btn:hover { color: var(--text); }
+
+.filter-select-wrap {
+  position: relative;
+  display: flex; align-items: center;
+}
+
+.filter-select-icon {
+  position: absolute; left: 10px;
+  color: var(--text-muted); pointer-events: none;
+}
+
+.filter-select {
+  appearance: none;
+  padding: 7px 12px 7px 30px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text); font-size: 0.82rem; font-family: var(--font);
+  cursor: pointer; outline: none;
+  min-width: 140px;
+  transition: border-color 0.3s ease;
+}
+
+.filter-select:hover { border-color: rgba(0,0,0,0.15); }
+
+.filter-sort-group {
+  position: relative;
+  display: flex; align-items: center;
+}
+
+.filter-result-text {
+  margin-top: 0.75rem;
+  font-size: 0.75rem; color: var(--text-muted);
+}
+
+/* ── Chart Toggle ── */
+
+.chart-toggle-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 12px;
+  background: none; border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-secondary); font-size: 0.78rem;
+  font-family: var(--font); cursor: pointer;
+  transition: all 0.3s ease;
+}
+.chart-toggle-btn:hover { border-color: rgba(0,0,0,0.15); color: var(--text); }
+.chart-toggle-btn.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1.5rem 1rem;
+}
+
+/* ── Data Section ── */
+
+.data-section { margin-bottom: 3rem; }
+
+.data-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* ── Grid ── */
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 48px;
+  align-items: start;
+}
+
+.col-main { min-width: 0; }
+.col-side { min-width: 0; }
+
 .main-content {
   padding: 100px 64px 80px;
   max-width: 1600px; margin: 0 auto;
@@ -684,6 +811,7 @@ body {
   .auth-card-inner { padding: 2.5rem 1.8rem; }
   .chart-toolbar { flex-direction: column; align-items: flex-start; }
 }
+
 
 
 
