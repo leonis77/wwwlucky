@@ -692,3 +692,43 @@ body {
   .chart-fields { flex-wrap: wrap; }
 }
 
+
+/* ════════════════════════════════════
+   Animated Background
+   ════════════════════════════════════ */
+
+.home-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(255,255,255,0.015) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 80% 70%, rgba(255,255,255,0.01) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 60% 10%, rgba(255,255,255,0.008) 0%, transparent 50%);
+  animation: bgPulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes bgPulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+/* Grid overlay */
+.home-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.3;
+}
+
+.main-grid { position: relative; z-index: 1; }
+.top-bar { position: relative; z-index: 101; }
