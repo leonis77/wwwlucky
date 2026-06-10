@@ -11,6 +11,8 @@ export function recommendChart(columns: ColumnInfo[]): ChartConfig {
   return { type, xField, yField };
 }
 
+const monoColors = ["#ffffff", "#cccccc", "#999999", "#666666", "#aaaaaa", "#888888", "#dddddd"];
+
 export function buildEChartsOption(
   rows: Record<string, unknown>[],
   config: ChartConfig
@@ -20,77 +22,82 @@ export function buildEChartsOption(
 
   if (config.type === "pie") {
     return {
+      backgroundColor: "transparent",
       tooltip: { trigger: "item" as const },
-      legend: { bottom: 0, textStyle: { color: "#aaa" } },
+      legend: { bottom: 0, textStyle: { color: "rgba(255,255,255,0.5)", fontSize: 12 } },
       series: [{
         type: "pie",
-        radius: ["35%", "65%"],
+        radius: ["45%", "72%"],
         center: ["50%", "45%"],
-        data: xData.map((name, i) => ({ name, value: yData[i] })),
-        label: { color: "#aaa" },
-        itemStyle: { borderRadius: 4, borderColor: "#1a1a2e", borderWidth: 3 },
+        data: xData.map((name, i) => ({
+          name,
+          value: yData[i],
+          itemStyle: { color: monoColors[i % monoColors.length] },
+        })),
+        label: { color: "rgba(255,255,255,0.5)", fontSize: 11 },
+        emphasis: {
+          itemStyle: { shadowBlur: 0 },
+          label: { fontSize: 14, fontWeight: 500 },
+        },
       }],
     };
   }
 
   if (config.type === "scatter") {
     return {
+      backgroundColor: "transparent",
       tooltip: { trigger: "item" as const },
       xAxis: {
         type: "category" as const, data: xData,
-        axisLabel: { color: "#888" },
-        axisLine: { lineStyle: { color: "#333" } },
+        axisLabel: { color: "rgba(255,255,255,0.4)", fontSize: 11 },
+        axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
       },
       yAxis: {
         type: "value" as const,
-        axisLabel: { color: "#888" },
-        axisLine: { lineStyle: { color: "#333" } },
-        splitLine: { lineStyle: { color: "#222" } },
+        axisLabel: { color: "rgba(255,255,255,0.4)", fontSize: 11 },
+        axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
+        splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
       },
       series: [{
         type: "scatter",
         data: yData,
-        symbolSize: 10,
-        itemStyle: { color: "#7c5cfc" },
+        symbolSize: 6,
+        itemStyle: { color: "#fff" },
       }],
     };
   }
 
   return {
+    backgroundColor: "transparent",
     tooltip: { trigger: "axis" as const },
-    grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
+    grid: { left: "0%", right: "2%", bottom: "0%", top: "5%", containLabel: true },
     xAxis: {
       type: "category" as const, data: xData,
-      axisLabel: { color: "#888", rotate: xData.length > 8 ? 30 : 0 },
-      axisLine: { lineStyle: { color: "#333" } },
+      axisLabel: { color: "rgba(255,255,255,0.4)", fontSize: 11, rotate: xData.length > 8 ? 30 : 0 },
+      axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
+      axisTick: { show: false },
     },
     yAxis: {
       type: "value" as const,
-      axisLabel: { color: "#888" },
-      axisLine: { lineStyle: { color: "#333" } },
-      splitLine: { lineStyle: { color: "#222" } },
+      axisLabel: { color: "rgba(255,255,255,0.4)", fontSize: 11 },
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } },
     },
     series: [{
       name: config.yField,
       type: config.type,
       data: yData,
+      barWidth: config.type === "bar" ? "60%" : undefined,
       smooth: config.type === "line",
       itemStyle: {
-        color: "#7c5cfc",
-        borderRadius: config.type === "bar" ? [6, 6, 0, 0] : undefined,
+        color: "#ffffff",
+        borderRadius: config.type === "bar" ? [2, 2, 0, 0] : undefined,
       },
-      ...(config.type === "line" ? {
-        lineStyle: { color: "#7c5cfc", width: 2 },
-        areaStyle: {
-          color: {
-            type: "linear", x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: "rgba(124,92,252,0.3)" },
-              { offset: 1, color: "rgba(124,92,252,0)" },
-            ],
-          },
-        },
-      } : {}),
+      lineStyle: config.type === "line" ? { color: "#ffffff", width: 1.5 } : undefined,
+      areaStyle: config.type === "line" ? {
+        color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{ offset: 0, color: "rgba(255,255,255,0.15)" }, { offset: 1, color: "rgba(255,255,255,0)" }] },
+      } : undefined,
     }],
   };
 }
