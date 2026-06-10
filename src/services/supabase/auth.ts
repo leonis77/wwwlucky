@@ -1,35 +1,66 @@
 ﻿import { supabase } from "./client";
 import type { User } from "../../types";
+import { validateEmail, sanitizeInput } from "../../utils/security";
 
 const errorMessages: Record<string, string> = {
   "Invalid login credentials": "邮箱或密码错误",
   "User already registered": "该邮箱已注册",
   "Password should be at least 6 characters": "密码至少需要 6 位",
-  "Email not confirmed": "邮箱尚未验证，请检查邮件",
-  "Email rate limit exceeded": "操作过于频繁，请稍后再试",
+  "Email not confirmed": "邮箱尚未验证，请检查邮件（可能进了垃圾箱）",
+  "Email rate limit exceeded": "操作过于频繁，请等待 60 秒后再试",
+  "For security purposes": "安全校验未通过，请重试",
+  "Unable to validate email address": "邮箱地址无效，请检查格式",
 };
 
 function translateError(message: string): string {
   for (const [key, val] of Object.entries(errorMessages)) {
     if (message.includes(key)) return val;
   }
-  return message || "操作失败，请重试";
+  return "操作失败，请重试";
 }
 
 export async function signUp(email: string, password: string) {
+  const cleanEmail = sanitizeInput(email, 254);
+  const validation = validateEmail(cleanEmail);
+  if (!validation.valid) {
+    return { user: null, error: validation.error };
+  }
+
   if (password.length < 6) {
     return { user: null, error: "密码至少需要 6 位字符" };
   }
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (password.length > 128) {
+    return { user: null, error: "密码过长" };
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+  });
+
   if (error) return { user: null, error: translateError(error.message) };
   return {
     user: data.user ? { id: data.user.id, email: data.user.email ?? "" } : null,
-    error: data.user ? null : "注册成功，请前往邮箱验证后登录",
+    error: data.user ? null : "注册请求已提交，请查收验证邮件后登录",
   };
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const cleanEmail = sanitizeInput(email, 254);
+  const validation = validateEmail(cleanEmail);
+  if (!validation.valid) {
+    return { user: null, error: validation.error };
+  }
+
+  if (password.length > 128) {
+    return { user: null, error: "密码过长" };
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password,
+  });
+
   if (error) return { user: null, error: translateError(error.message) };
   return {
     user: data.user ? { id: data.user.id, email: data.user.email ?? "" } : null,
@@ -42,9 +73,16 @@ export async function signOut() {
 }
 
 export async function resetPassword(email: string) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const cleanEmail = sanitizeInput(email, 254);
+  const validation = validateEmail(cleanEmail);
+  if (!validation.valid) {
+    return { error: validation.error };
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
     redirectTo: window.location.origin + "/#/auth",
   });
+
   if (error) return { error: translateError(error.message) };
   return { error: null };
 }

@@ -1,5 +1,4 @@
 ﻿import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { Mail, Lock, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 
@@ -9,30 +8,24 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { login, register, forgotPassword, loading, error, resetSent, clearError, clearResetSent } = useAuthStore();
-  const navigate = useNavigate();
+  const {
+    login, register, forgotPassword,
+    loading, error, resetSent, cooldown, clearError, clearResetSent,
+  } = useAuthStore();
 
   const mode = showForgot ? "forgot" : isLogin ? "login" : "register";
+  const isLocked = cooldown !== null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return;
     if (mode === "forgot") {
       await forgotPassword(email);
       return;
     }
-    if (!email.includes("@")) {
-      useAuthStore.setState({ error: "请输入有效的邮箱地址" });
-      return;
-    }
     if (mode === "login") {
       await login(email, password);
-      const state = useAuthStore.getState();
-      if (!state.error) navigate("/");
     } else {
-      if (password.length < 6) {
-        useAuthStore.setState({ error: "密码至少需要 6 位字符" });
-        return;
-      }
       await register(email, password);
     }
   };
@@ -57,7 +50,7 @@ export default function AuthPage() {
             <h1 className="auth-title">个人数据工作台</h1>
             <p className="auth-subtitle">
               {mode === "forgot"
-                ? "输入注册邮箱，我们发送重置链接"
+                ? "输入注册邮箱，我们将发送重置链接"
                 : mode === "login"
                 ? "登录以继续使用"
                 : "创建账户，开始使用"}
@@ -74,6 +67,8 @@ export default function AuthPage() {
                 onChange={(e) => { setEmail(e.target.value); clearError(); }}
                 required
                 autoFocus
+                maxLength={254}
+                disabled={isLocked}
               />
             </div>
 
@@ -82,11 +77,13 @@ export default function AuthPage() {
                 <Lock className="input-icon" size={16} />
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="密码"
+                  placeholder="密码（至少 6 位）"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); clearError(); }}
                   required
                   minLength={6}
+                  maxLength={128}
+                  disabled={isLocked}
                 />
                 <button
                   type="button"
@@ -99,14 +96,22 @@ export default function AuthPage() {
               </div>
             )}
 
+            {isLocked && !error && (
+              <div className="auth-error">
+                操作过于频繁，请等待 {cooldown} 秒
+              </div>
+            )}
+
             {error && <div className="auth-error">{error}</div>}
             {resetSent && (
               <div className="auth-success">重置链接已发送至你的邮箱，请查收</div>
             )}
 
-            <button type="submit" className="auth-submit" disabled={loading}>
+            <button type="submit" className="auth-submit" disabled={loading || isLocked}>
               {loading ? (
                 <div className="spinner-small" />
+              ) : isLocked ? (
+                <>请等待 {cooldown}s</>
               ) : mode === "forgot" ? (
                 <>发送重置链接</>
               ) : (
