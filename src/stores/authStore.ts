@@ -1,22 +1,26 @@
 ﻿import { create } from "zustand";
 import type { User } from "../types";
-import { getCurrentUser, signIn, signUp, signOut, onAuthStateChange } from "../services/supabase/auth";
+import { getCurrentUser, signIn, signUp, signOut, resetPassword, onAuthStateChange } from "../services/supabase/auth";
 
 interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
+  resetSent: boolean;
   initialize: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
   clearError: () => void;
+  clearResetSent: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: true,
   error: null,
+  resetSent: false,
 
   initialize: () => {
     onAuthStateChange((user) => set({ user, loading: false }));
@@ -40,5 +44,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null });
   },
 
+  forgotPassword: async (email) => {
+    set({ loading: true, error: null });
+    const { error } = await resetPassword(email);
+    set({ loading: false, error, resetSent: !error });
+  },
+
   clearError: () => set({ error: null }),
+  clearResetSent: () => set({ resetSent: false }),
 }));
