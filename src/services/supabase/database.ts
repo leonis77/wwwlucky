@@ -15,9 +15,13 @@ export async function createDataset(
   rows: Record<string, unknown>[],
   columns: Dataset["columns"]
 ): Promise<Dataset> {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("用户未登录");
+
   const { data, error } = await supabase
     .from("datasets")
-    .insert({ name, data: rows, columns })
+    .insert({ name, data: rows, columns, user_id: userId })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -47,9 +51,13 @@ export async function fetchDiaryEntries(): Promise<DiaryEntry[]> {
 }
 
 export async function createDiaryEntry(content: string): Promise<DiaryEntry> {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("用户未登录");
+
   const { data, error } = await supabase
     .from("diary_entries")
-    .insert({ content })
+    .insert({ content, user_id: userId })
     .select()
     .single();
   if (error) throw new Error(error.message);
