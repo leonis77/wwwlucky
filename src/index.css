@@ -412,6 +412,54 @@ body {
 .dataset-item:hover .dataset-delete { opacity: 1; }
 .dataset-delete:hover { color: #ff6b6b; }
 
+/* ── Chart Search ── */
+
+/* ── Chart Search ── */
+
+.chart-search-wrap {
+  position: relative;
+  display: flex; align-items: center;
+}
+
+.chart-search-icon {
+  position: absolute; left: 10px;
+  color: var(--text-muted); pointer-events: none;
+}
+
+.chart-search-input {
+  width: 200px; padding: 6px 32px 6px 34px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  color: #fff; font-size: 0.78rem; font-family: var(--font);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.chart-search-input:focus {
+  border-color: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05);
+  width: 240px;
+}
+
+.chart-search-input::placeholder { color: var(--text-muted); }
+
+.chart-search-clear {
+  position: absolute; right: 6px;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; transition: color 0.2s ease;
+}
+
+.chart-search-clear:hover { color: #fff; }
+
+.chart-result-count {
+  margin-bottom: 0.8rem;
+  font-size: 0.72rem; color: var(--text-muted);
+}
+
+
 /* ── Chart Section ── */
 
 .chart-section { margin-bottom: 80px; }
@@ -643,3 +691,4 @@ body {
   .chart-toolbar { flex-direction: column; align-items: flex-start; }
   .chart-fields { flex-wrap: wrap; }
 }
+

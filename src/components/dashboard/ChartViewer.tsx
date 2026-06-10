@@ -1,4 +1,5 @@
-﻿import ReactEChartsCore from "echarts-for-react/lib/core";
+﻿import { useState, useMemo } from "react";
+import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart as ELineChart, PieChart as EPieChart, ScatterChart } from "echarts/charts";
 import { GridComponent, TooltipComponent, LegendComponent } from "echarts/components";
@@ -7,7 +8,7 @@ import { useDatasetStore } from "../../stores/datasetStore";
 import { buildEChartsOption } from "../../services/chart/config";
 import type { ChartType } from "../../types";
 import {
-  BarChart3, LineChart, PieChart, ScatterChart as ScatterIcon, Table2, ChevronDown,
+  BarChart3, LineChart, PieChart, ScatterChart as ScatterIcon, Table2, ChevronDown, Search, X,
 } from "lucide-react";
 
 echarts.use([
@@ -25,6 +26,17 @@ const chartOptions: { type: ChartType; label: string; icon: React.ReactNode }[] 
 
 export default function ChartViewer() {
   const { preview, chartConfig, updateChartConfig } = useDatasetStore();
+  const [search, setSearch] = useState("");
+
+  const filteredRows = useMemo(() => {
+    if (!preview || !search.trim()) return preview?.rows ?? [];
+    const term = search.toLowerCase();
+    return preview.rows.filter((row) =>
+      preview.columns.some((col) =>
+        String(row[col.key] ?? "").toLowerCase().includes(term)
+      )
+    );
+  }, [preview, search]);
 
   if (!preview || !chartConfig) {
     return (
@@ -37,7 +49,7 @@ export default function ChartViewer() {
     );
   }
 
-  const option = buildEChartsOption(preview.rows, chartConfig);
+  const option = buildEChartsOption(filteredRows, chartConfig);
 
   return (
     <section className="chart-section">
@@ -55,23 +67,45 @@ export default function ChartViewer() {
           ))}
         </div>
 
+        <div className="chart-search-wrap">
+          <Search size={14} className="chart-search-icon" />
+          <input
+            type="text"
+            className="chart-search-input"
+            placeholder="搜索过滤数据..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="chart-search-clear" onClick={() => setSearch("")}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
         {chartConfig.type !== "table" && (
           <div className="chart-fields">
             <FieldSelect
-              label="X 轴"
+              label="X"
               value={chartConfig.xField}
               columns={preview.columns}
               onChange={(v) => updateChartConfig({ xField: v })}
             />
             {chartConfig.type !== "pie" && (
               <FieldSelect
-                label="Y 轴"
+                label="Y"
                 value={chartConfig.yField}
                 columns={preview.columns}
                 onChange={(v) => updateChartConfig({ yField: v })}
               />
             )}
           </div>
+        )}
+      </div>
+
+      <div className="chart-result-count">
+        {search.trim() && (
+          <span>筛选结果：{filteredRows.length} / {preview.rows.length} 条</span>
         )}
       </div>
 
@@ -86,7 +120,7 @@ export default function ChartViewer() {
               </tr>
             </thead>
             <tbody>
-              {preview.rows.map((row, i) => (
+              {filteredRows.map((row, i) => (
                 <tr key={i}>
                   {preview.columns.map((col) => (
                     <td key={col.key}>{String(row[col.key] ?? "")}</td>
