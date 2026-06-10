@@ -349,6 +349,85 @@ body {
 
 /* ── Chart ── */
 
+.chart-result-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.chart-display-cols {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chart-col-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.chart-col-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.chart-col-toggle:hover {
+  color: var(--text);
+}
+
+
+.chart-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+.chart-suggestion-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.82rem;
+  font-family: var(--font);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.chart-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.chart-suggestion-item:hover,
+.chart-suggestion-item.active {
+  background: var(--elevated);
+}
+
+.chart-empty-small {
+  padding: 60px 2rem !important;
+}
+
+
 .chart-search-column {
   display: flex; align-items: center; gap: 6px;
 }
@@ -605,4 +684,6 @@ body {
   .auth-card-inner { padding: 2.5rem 1.8rem; }
   .chart-toolbar { flex-direction: column; align-items: flex-start; }
 }
+
+
 
