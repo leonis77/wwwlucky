@@ -1,5 +1,4 @@
-﻿import { useState, useMemo } from "react";
-import ReactEChartsCore from "echarts-for-react/lib/core";
+﻿import ReactEChartsCore from "echarts-for-react";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart as ELineChart, PieChart as EPieChart, ScatterChart } from "echarts/charts";
 import { GridComponent, TooltipComponent, LegendComponent } from "echarts/components";
@@ -10,6 +9,7 @@ import type { ChartType } from "../../types";
 import {
   BarChart3, LineChart, PieChart, ScatterChart as ScatterIcon, Table2, ChevronDown, Search, X,
 } from "lucide-react";
+import { useState, useMemo } from "react";
 
 echarts.use([
   BarChart, ELineChart, EPieChart, ScatterChart,
@@ -131,11 +131,11 @@ export default function ChartViewer() {
           </table>
         </div>
       ) : (
-        <div className="chart-canvas">
+        <div className="chart-canvas" style={{ width: "100%", minHeight: 380 }}>
           <ReactEChartsCore
             echarts={echarts}
             option={option}
-            style={{ height: 380 }}
+            style={{ width: "100%", height: 380 }}
             notMerge
           />
         </div>
