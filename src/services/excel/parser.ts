@@ -22,16 +22,44 @@ export function parseExcelFile(file: File): Promise<ParseResult> {
           return;
         }
 
+        // Clean up column names
         const rawKeys = Object.keys(jsonData[0]);
-        const columns: ColumnInfo[] = rawKeys.map((key) => ({
-          key,
-          label: key,
-          type: inferColumnType(jsonData, key),
-        }));
+        const columns: ColumnInfo[] = [];
+        const keyMap: Record<string, string> = {};
 
-        resolve({ rows: jsonData, columns });
+        for (let i = 0; i < rawKeys.length; i++) {
+          const key = rawKeys[i];
+          // Replace __EMPTY / __EMPTY_N with "列 N"
+          let label = key;
+          if (key.startsWith("__EMPTY")) {
+            label = "列 " + (i + 1);
+          }
+          keyMap[key] = label;
+          columns.push({
+            key,
+            label,
+            type: inferColumnType(jsonData, key),
+          });
+        }
+
+        // Filter out completely empty columns
+        const nonEmptyCols = columns.filter((col) => {
+          return jsonData.some((row) => String(row[col.key] ?? "").trim() !== "");
+        });
+
+        const finalRows = nonEmptyCols.length < columns.length
+          ? jsonData.map((row) => {
+              const newRow: Record<string, unknown> = {};
+              for (const col of nonEmptyCols) {
+                newRow[col.key] = row[col.key];
+              }
+              return newRow;
+            })
+          : jsonData;
+
+        resolve({ rows: finalRows, columns: nonEmptyCols });
       } catch {
-        reject(new Error("Excel文件解析失败"));
+        reject(new Error("文件解析失败"));
       }
     };
     reader.onerror = () => reject(new Error("文件读取失败"));
@@ -42,7 +70,6 @@ export function parseExcelFile(file: File): Promise<ParseResult> {
 function inferColumnType(rows: Record<string, unknown>[], key: string): ColumnInfo["type"] {
   const sample = rows.slice(0, 20);
   let numberCount = 0;
-  let dateCount = 0;
   let totalCount = 0;
 
   for (const row of sample) {
@@ -50,16 +77,11 @@ function inferColumnType(rows: Record<string, unknown>[], key: string): ColumnIn
     if (val === null || val === undefined || val === "") continue;
     totalCount++;
     const str = String(val).trim();
-    if (!isNaN(Number(str)) && str !== "") {
-      numberCount++;
-    } else if (!isNaN(Date.parse(str))) {
-      dateCount++;
-    }
+    if (!isNaN(Number(str)) && str !== "") numberCount++;
   }
 
   if (totalCount === 0) return "string";
   if (numberCount / totalCount >= 0.7) return "number";
-  if (dateCount / totalCount >= 0.7) return "date";
   return "string";
 }
 

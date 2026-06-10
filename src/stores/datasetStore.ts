@@ -1,5 +1,5 @@
 ﻿import { create } from "zustand";
-import type { Dataset, ChartConfig, ColumnInfo } from "../types";
+import type { ChartConfig, ColumnInfo } from "../types";
 import { parseExcelFile, exportToExcel } from "../services/excel/parser";
 import { recommendChart } from "../services/chart/config";
 
@@ -9,18 +9,18 @@ function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-function loadSets(): Dataset[] {
+function loadSets(): import("../types").Dataset[] {
   try { return JSON.parse(localStorage.getItem("pd_datasets") || "[]"); }
   catch { return []; }
 }
 
-function saveSets(datasets: Dataset[]) {
+function saveSets(datasets: import("../types").Dataset[]) {
   localStorage.setItem("pd_datasets", JSON.stringify(datasets));
 }
 
 interface DatasetState {
-  datasets: Dataset[];
-  currentDataset: Dataset | null;
+  datasets: import("../types").Dataset[];
+  currentDataset: import("../types").Dataset | null;
   preview: { rows: Record<string, unknown>[]; columns: ColumnInfo[] } | null;
   chartConfig: ChartConfig | null;
   loading: boolean;
@@ -28,7 +28,7 @@ interface DatasetState {
   loadDatasets: () => void;
   uploadFile: (file: File) => Promise<void>;
   removeDataset: (id: string) => void;
-  selectDataset: (dataset: Dataset) => void;
+  selectDataset: (dataset: import("../types").Dataset) => void;
   updateChartConfig: (config: Partial<ChartConfig>) => void;
   clearError: () => void;
 }
@@ -51,7 +51,7 @@ export const useDatasetStore = create<DatasetState>((set) => ({
       const result = await parseExcelFile(file);
       const name = file.name.replace(/\.(xlsx|xls)$/i, "");
       const config = recommendChart(result.columns);
-      const dataset: Dataset = {
+      const dataset: import("../types").Dataset = {
         id: uid(),
         user_id: "local",
         name,

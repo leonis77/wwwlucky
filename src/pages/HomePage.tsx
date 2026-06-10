@@ -6,7 +6,7 @@ import FileUploader from "../components/dashboard/FileUploader";
 import ChartViewer from "../components/dashboard/ChartViewer";
 import DiaryEditor from "../components/diary/DiaryEditor";
 import DiaryList from "../components/diary/DiaryList";
-import { LogOut } from "lucide-react";
+import { LogOut, BookOpen } from "lucide-react";
 
 export default function HomePage() {
   const { user, logout } = useAuthStore();
@@ -33,19 +33,24 @@ export default function HomePage() {
       </header>
 
       <main className="main-content">
-        <div className="main-grid">
-          <div className="col-data">
-            <FileUploader />
-            <ChartViewer />
+        <section className="section-dark">
+          <div className="main-grid">
+            <div className="col-data">
+              <FileUploader />
+              <ChartViewer />
+            </div>
+            <div className="col-diary">
+              <section className="diary-section">
+                <div className="section-head">
+                  <BookOpen size={14} strokeWidth={1.5} />
+                  日记
+                </div>
+                <DiaryEditor />
+                <DiaryList />
+              </section>
+            </div>
           </div>
-          <div className="col-diary">
-            <section className="diary-section">
-              <div className="diary-section-header">日记</div>
-              <DiaryEditor />
-              <DiaryList />
-            </section>
-          </div>
-        </div>
+        </section>
       </main>
     </div>
   );
