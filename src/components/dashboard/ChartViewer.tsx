@@ -9,7 +9,7 @@ import type { ChartType } from "../../types";
 import {
   BarChart3, LineChart, PieChart, ScatterChart as ScatterIcon, Table2, ChevronDown, Search, X,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 echarts.use([
   BarChart, ELineChart, EPieChart, ScatterChart,
@@ -27,16 +27,30 @@ const chartOptions: { type: ChartType; label: string; icon: React.ReactNode }[] 
 export default function ChartViewer() {
   const { preview, chartConfig, updateChartConfig } = useDatasetStore();
   const [search, setSearch] = useState("");
+  const [searchColumn, setSearchColumn] = useState("");
+
+  // Default search column to first non-numeric (the name column)
+  const defaultSearchCol = useMemo(() => {
+    if (!preview) return "";
+    const nameCol = preview.columns.find((c) => c.type === "string");
+    return nameCol?.key ?? preview.columns[0]?.key ?? "";
+  }, [preview]);
+
+  const activeSearchCol = searchColumn || defaultSearchCol;
 
   const filteredRows = useMemo(() => {
     if (!preview || !search.trim()) return preview?.rows ?? [];
-    const term = search.toLowerCase();
-    return preview.rows.filter((row) =>
-      preview.columns.some((col) =>
-        String(row[col.key] ?? "").toLowerCase().includes(term)
-      )
-    );
-  }, [preview, search]);
+    const term = search.trim();
+    return preview.rows.filter((row) => {
+      const val = String(row[activeSearchCol] ?? "").trim();
+      return val === term;
+    });
+  }, [preview, search, activeSearchCol]);
+
+  const clearSearch = useCallback(() => {
+    setSearch("");
+    setSearchColumn("");
+  }, []);
 
   if (!preview || !chartConfig) {
     return (
@@ -72,15 +86,30 @@ export default function ChartViewer() {
           <input
             type="text"
             className="chart-search-input"
-            placeholder="搜索过滤数据..."
+            placeholder={`在 "${preview.columns.find(c => c.key === activeSearchCol)?.label ?? activeSearchCol}" 中精确搜索...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button className="chart-search-clear" onClick={() => setSearch("")}>
+            <button className="chart-search-clear" onClick={clearSearch}>
               <X size={14} />
             </button>
           )}
+        </div>
+
+        <div className="chart-search-column">
+          <span className="field-label">搜索列</span>
+          <div className="field-select-wrap">
+            <select
+              value={activeSearchCol}
+              onChange={(e) => setSearchColumn(e.target.value)}
+            >
+              {preview.columns.map((c) => (
+                <option key={c.key} value={c.key}>{c.label}</option>
+              ))}
+            </select>
+            <ChevronDown size={13} className="select-arrow" />
+          </div>
         </div>
 
         {chartConfig.type !== "table" && (
@@ -105,7 +134,9 @@ export default function ChartViewer() {
 
       <div className="chart-result-count">
         {search.trim() && (
-          <span>筛选结果：{filteredRows.length} / {preview.rows.length} 条</span>
+          <span>
+            精确匹配 &ldquo;{activeSearchCol === defaultSearchCol ? preview.columns.find(c => c.key === activeSearchCol)?.label : activeSearchCol}&rdquo;：{filteredRows.length} / {preview.rows.length} 条
+          </span>
         )}
       </div>
 
