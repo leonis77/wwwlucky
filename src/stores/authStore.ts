@@ -2,24 +2,24 @@
 import type { User } from "../types";
 import { getCurrentUser, signIn, signUp, signOut, resetPassword, onAuthStateChange } from "../services/supabase/auth";
 
-// 客户端限流：3 次失败后冷却 60 秒
-const MAX_FAILURES = 3;
-const COOLDOWN_MS = 60_000;
+// 全局限流：所有认证操作共享计数器（不仅是失败）
+const MAX_ATTEMPTS = 3;
+const COOLDOWN_MS = 120_000; // 2 分钟
 
-let failureTimestamps: number[] = [];
+let attemptTimestamps: number[] = [];
 
 function checkCooldown(): number | null {
   const now = Date.now();
-  failureTimestamps = failureTimestamps.filter((t) => now - t < COOLDOWN_MS);
-  if (failureTimestamps.length >= MAX_FAILURES) {
-    const oldest = failureTimestamps[0];
+  attemptTimestamps = attemptTimestamps.filter((t) => now - t < COOLDOWN_MS);
+  if (attemptTimestamps.length >= MAX_ATTEMPTS) {
+    const oldest = attemptTimestamps[0];
     return Math.ceil((COOLDOWN_MS - (now - oldest)) / 1000);
   }
   return null;
 }
 
-function recordFailure() {
-  failureTimestamps.push(Date.now());
+function recordAttempt() {
+  attemptTimestamps.push(Date.now());
 }
 
 interface AuthState {
@@ -46,10 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   cooldown: null,
 
   initialize: () => {
-    setInterval(() => {
-      const cd = checkCooldown();
-      set({ cooldown: cd });
-    }, 1000);
+    setInterval(() => set({ cooldown: checkCooldown() }), 1000);
     onAuthStateChange((user) => set({ user, loading: false }));
     getCurrentUser().then((user) => set({ user, loading: false }));
   },
@@ -57,31 +54,31 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     const cd = checkCooldown();
     if (cd !== null) {
-      set({ error: `操作过于频繁，请等待 ${cd} 秒后再试`, cooldown: cd });
+      set({ error: `请求过快，请等待 ${cd} 秒`, cooldown: cd });
       return;
     }
     set({ loading: true, error: null });
+    recordAttempt();
     const { error } = await signIn(email, password);
     if (error) {
-      recordFailure();
-      set({ loading: false, error, cooldown: checkCooldown() });
+      set({ loading: false, error });
     } else {
-      failureTimestamps = [];
-      set({ loading: false, cooldown: null });
+      attemptTimestamps = [];
+      set({ loading: false });
     }
   },
 
   register: async (email, password) => {
     const cd = checkCooldown();
     if (cd !== null) {
-      set({ error: `操作过于频繁，请等待 ${cd} 秒后再试`, cooldown: cd });
+      set({ error: `请求过快，请等待 ${cd} 秒`, cooldown: cd });
       return;
     }
     set({ loading: true, error: null });
+    recordAttempt();
     const { error } = await signUp(email, password);
     if (error) {
-      recordFailure();
-      set({ loading: false, error, cooldown: checkCooldown() });
+      set({ loading: false, error });
     } else {
       set({ loading: false });
     }
@@ -93,7 +90,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   forgotPassword: async (email) => {
+    const cd = checkCooldown();
+    if (cd !== null) {
+      set({ error: `请求过快，请等待 ${cd} 秒`, cooldown: cd });
+      return;
+    }
     set({ loading: true, error: null });
+    recordAttempt();
     const { error } = await resetPassword(email);
     set({ loading: false, error, resetSent: !error });
   },

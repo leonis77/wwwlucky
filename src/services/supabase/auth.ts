@@ -7,7 +7,7 @@ const errorMessages: Record<string, string> = {
   "User already registered": "该邮箱已注册",
   "Password should be at least 6 characters": "密码至少需要 6 位",
   "Email not confirmed": "邮箱尚未验证，请检查邮件（可能进了垃圾箱）",
-  "Email rate limit exceeded": "操作过于频繁，请等待 60 秒后再试",
+  "Email rate limit exceeded": "邮件发送已达上限（免费版每小时仅 2 封），请等待约 1 小时或前往 Supabase 控制台关闭邮箱验证后重试",
   "For security purposes": "安全校验未通过，请重试",
   "Unable to validate email address": "邮箱地址无效，请检查格式",
 };
