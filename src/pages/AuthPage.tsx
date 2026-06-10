@@ -1,4 +1,5 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 
@@ -9,9 +10,15 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const {
-    login, register, forgotPassword,
+    user, login, register, forgotPassword,
     loading, error, resetSent, cooldown, clearError, clearResetSent,
   } = useAuthStore();
+  const navigate = useNavigate();
+
+  // 已登录直接跳转
+  useEffect(() => {
+    if (user) navigate("/", { replace: true });
+  }, [user, navigate]);
 
   const mode = showForgot ? "forgot" : isLogin ? "login" : "register";
   const isLocked = cooldown !== null;
@@ -19,15 +26,19 @@ export default function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked) return;
+
     if (mode === "forgot") {
       await forgotPassword(email);
       return;
     }
+
+    let ok: boolean;
     if (mode === "login") {
-      await login(email, password);
+      ok = await login(email, password);
     } else {
-      await register(email, password);
+      ok = await register(email, password);
     }
+    if (ok) navigate("/", { replace: true });
   };
 
   const switchMode = () => {
@@ -42,7 +53,7 @@ export default function AuthPage() {
             <div className="auth-logo">PD</div>
             <h1 className="auth-title">个人数据工作台</h1>
             <p className="auth-subtitle">
-              {mode === "forgot" ? "输入注册邮箱，我们将发送重置链接" : mode === "login" ? "登录以继续" : "创建账户"}
+              {mode === "forgot" ? "输入注册邮箱，发送重置链接" : mode === "login" ? "登录以继续" : "创建账户"}
             </p>
           </div>
 
