@@ -30,21 +30,21 @@ export function parseExcelFile(file: File): Promise<NormalizedData> {
         }
 
         const rawKeys = Object.keys(rows[0]);
+
+        // Column 3 (index 2) = product name
+        // Column 5 (index 4) = price
+        const nameCol = rawKeys[2];
+        const priceCol = rawKeys[4];
+        const catCol = rawKeys[3] ?? rawKeys[0];
+
+        if (!nameCol || !priceCol) {
+          reject(new Error("文件格式不正确，需要第3列为产品名称、第5列为价格"));
+          return;
+        }
+
         const columns = rawKeys.filter((k) =>
           rows.some((r) => String(r[k] ?? "").trim() !== "")
         );
-
-        // Identify columns by type
-        const colTypes = rawKeys.map((key) => ({
-          key,
-          type: inferType(rows, key),
-        }));
-
-        const nameCol = colTypes.find((c) => c.type === "string")?.key ?? rawKeys[0];
-        const priceCol = colTypes.find((c) => c.type === "number")?.key ?? rawKeys[1];
-        const categoryCol = colTypes.find(
-          (c) => c.type === "string" && c.key !== nameCol
-        )?.key ?? rawKeys[rawKeys.length > 2 ? 2 : 0];
 
         const products: Product[] = [];
         for (const row of rows) {
@@ -52,7 +52,7 @@ export function parseExcelFile(file: File): Promise<NormalizedData> {
           if (!name) continue;
 
           const price = parseFloat(String(row[priceCol] ?? "0")) || 0;
-          const category = String(row[categoryCol] ?? "").trim() || "未分类";
+          const category = String(row[catCol] ?? "").trim() || "未分类";
 
           products.push({ name, price, category, raw: row });
         }
@@ -65,19 +65,6 @@ export function parseExcelFile(file: File): Promise<NormalizedData> {
     reader.onerror = () => reject(new Error("文件读取失败"));
     reader.readAsArrayBuffer(file);
   });
-}
-
-function inferType(rows: Record<string, unknown>[], key: string): "string" | "number" {
-  const sample = rows.slice(0, 30);
-  let numberCount = 0;
-  let totalCount = 0;
-  for (const row of sample) {
-    const val = row[key];
-    if (val === null || val === undefined || val === "") continue;
-    totalCount++;
-    if (!isNaN(Number(val)) && String(val).trim() !== "") numberCount++;
-  }
-  return totalCount > 0 && numberCount / totalCount >= 0.5 ? "number" : "string";
 }
 
 export function exportToExcel(products: Product[], fileName: string): void {
